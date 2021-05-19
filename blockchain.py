@@ -15,6 +15,15 @@ class Blockchain:
         self.nodes = set()
 
     def create_block(self, proof, prev_hash):
+        """
+        Create a new Block in the Blockchain
+
+        :param proof: The proof given by the Proof of Work algorithm
+        :param previous_hash: Hash of previous Block
+        :return: New Block
+
+        """
+
         block = {
             'index': len(self.chain) + 1,
             'timestamp': str(datetime.datetime.now()),
@@ -26,9 +35,11 @@ class Blockchain:
         self.chain.append(block)
         return block
 
+    # Simply returns the previous block in the chain by finding the end of the list before we add a new block
     def get_previous_block(self):
         return self.chain[-1]
 
+    # Our Proof of Work algorithm is what needs to be solved by the miners to gain a reward
     def proof_of_work(self, previous_proof):
         nonce = 1
         check_proof = False
@@ -44,6 +55,7 @@ class Blockchain:
 
     def hash(self, block):
         # Encode block keys in JSON format and encode for SHA256
+        # We have to ensure the block is ordered or our hashes will be inconsistent
         encoded_block = json.dumps(block, sort_keys = True).encode()
         return hashlib.sha256(encoded_block).hexdigest()
 
@@ -51,17 +63,29 @@ class Blockchain:
     def validate_chain(self, chain):
         block_index = 1
         previous_block = chain[0]
+        
         while block_index < len(chain):
             block = chain[block_index]
+
+            # Print to see what we are doing
+            print(f'{previous_block}')
+            print(f'{block}')
+            print("\n-----------\n")
+
+            # Check the hash is correct
             if block['previous_hash'] != self.hash(previous_block):
                 return False
+
+            # Check that the Proof of Work is correct
             previous_proof = previous_block['proof']
             proof = block['proof']
             hash_operation = hashlib.sha256(str(proof**64 - previous_proof**32).encode()).hexdigest()
+
             if hash_operation[:4] != '0000':
                 return False
             previous_block = block
             block_index += 1
+        
         return True
 
     # Add a new transaction to a new block
@@ -78,8 +102,12 @@ class Blockchain:
     # Add a non relative address (url + port) of our new node to the node set
     def add_node(self, address):
         node_address = urlparse(address)
-        self.nodes.add(node_address.netloc)
+        if node_address.netloc:
+            self.nodes.add(node_address.netloc)
+        elif node_address.path:
+            self.nodes.add(node_address.path)
 
+    # This is our Consensus algorithm, it resolves conflicts by replacing our chain with the longest in the network
     def replace_chain(self):
         network = self.nodes
         longest_chain = None
