@@ -1,10 +1,12 @@
-##To install do:
+## To install do:
 
 ```
 pip install -r requirements.txt
 ```
 
-First run ```
+First run 
+
+```
 python wallet.py
 ```
 
