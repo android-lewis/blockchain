@@ -1,4 +1,4 @@
-## To install do:
+# To install do:
 
 ```
 pip install -r requirements.txt
@@ -22,4 +22,4 @@ python app.py -p YOUR_CHOSEN_PORT
 
 Now you can play with the API in Postman to mine blocks, or use the wallet.py utility to send transactions.
 
-# Sending through the API will not work as you need to sign each transaction, this is done for you in wallet.py
+## Sending through the API will not work as you need to sign each transaction, this is done for you in wallet.py
