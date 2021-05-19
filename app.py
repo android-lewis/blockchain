@@ -1,6 +1,12 @@
 import blockchain
+from miner_config import MINER_ADDRESS, MINER_NODE_URL
+import ecdsa
+import base64
 from uuid import uuid4
 from flask import Flask, jsonify, request
+
+# Setup a few variables
+MINING_REWARD = 50
 
 # Flask setup
 app = Flask(__name__)
@@ -23,7 +29,7 @@ def mine_block():
     previous_hash = chain.hash(previous_block)
 
     # Add a new transaction to reward the miner
-    chain.add_transaction(sender = node_address, reciever= 'lewis', amount= 50)
+    chain.add_transaction(sender = node_address, reciever= MINER_ADDRESS, amount= MINING_REWARD)
     new_block = chain.create_block(new_proof, previous_hash)
     response = {
         'message': 'Block mined', 
@@ -54,14 +60,32 @@ def validate():
 # Add a new transaction       
 @app.route('/add_transaction', methods=['POST'])
 def add_transaction():
-    json = request.get_json()
-    transaction_keys = ['sender', 'reciever', 'amount']
-    if not all (keys in json for keys in transaction_keys):
+    new_txion = request.get_json()
+    transaction_keys = ['sender', 'reciever', 'amount', 'signature', 'message']
+    if not all (keys in new_txion for keys in transaction_keys):
         return 'Malformed request: please include sender, reciever and amound', 400
     else:
-        index = chain.add_transaction(sender = json['sender'], reciever = json['reciever'], amount = json['amount'])
-    response = {'message': f'This transaction will be added at block index {index}'}
-    return jsonify(response), 201
+        if validate_signature(new_txion['sender'], new_txion['signature'], new_txion['message']):
+            index = chain.add_transaction(sender = new_txion['sender'], reciever = new_txion['reciever'], amount = new_txion['amount'])
+            response = {'message': f'This transaction will be added at block index {index}'}
+            return jsonify(response), 201
+        else:
+            return "Transaction submission failed. Wrong signature\n", 400
+
+def validate_signature(public_key, signature, message):
+    """Verifies if the signature is correct. This is used to prove
+    it's you (and not someone else) trying to do a transaction with your
+    address. Called when a user tries to submit a new transaction.
+    """
+    public_key = (base64.b64decode(public_key)).hex()
+    signature = base64.b64decode(signature)
+    vk = ecdsa.VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1)
+    
+    # Try changing into an if/else statement as except is too broad.
+    try:
+        return vk.verify(signature, message.encode())
+    except:
+        return False
 
 # Connect a new node
 @app.route('/connect', methods=['POST'])
